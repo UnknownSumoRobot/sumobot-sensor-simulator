@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sumobot Sensor Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0c0f;
+  --surface: #111418;
+  --surface2: #181c22;
+  --border: #252b35;
+  --accent: #00e5ff;
+  --accent2: #ff6b35;
+  --accent3: #7fff6b;
+  --text: #c8d0dc;
+  --text-dim: #5a6478;
+  --text-bright: #eef2f8;
+  --js200-color: #00e5ff;
+  --js80-color: #ff9f1c;
+  --blind-color: rgba(255,40,40,0.18);
+  --overlap-color: rgba(100,255,100,0.12);
+}
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+header {
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+}
+
+.logo-badge {
+  background: var(--accent);
+  color: #000;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-bright);
+}
+
+header .sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 280px 1fr 260px;
+  flex: 1;
+  gap: 0;
+}
+
+/* LEFT PANEL */
+.panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+.panel-right {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.section-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+/* CONFIG TOGGLE */
+.config-group { display: flex; flex-direction: column; gap: 6px; }
+
+.config-preset {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--surface2);
+  position: relative;
+}
+.config-preset:hover { border-color: var(--accent); }
+.config-preset.active { border-color: var(--accent); background: rgba(0,229,255,0.06); }
+.config-preset .preset-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.config-preset .preset-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+.config-preset .preset-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.config-preset .active-tag {
+  position: absolute; right: 8px; top: 8px;
+  font-family: 'Space Mono', monospace; font-size: 8px;
+  background: var(--accent); color: #000; padding: 1px 5px; border-radius: 2px;
+  display: none;
+}
+.config-preset.active .active-tag { display: block; }
+
+/* SLIDERS */
+.slider-group { display: flex; flex-direction: column; gap: 12px; }
+.slider-row { display: flex; flex-direction: column; gap: 4px; }
+.slider-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--text);
+}
+.slider-label span:last-child {
+  font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent);
+}
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 3px; border-radius: 2px;
+  background: var(--border); outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 6px rgba(0,229,255,0.4);
+}
+.slider-200 input[type=range]::-webkit-slider-thumb { background: var(--js200-color); box-shadow: 0 0 6px rgba(0,229,255,0.4); }
+.slider-80 input[type=range]::-webkit-slider-thumb { background: var(--js80-color); box-shadow: 0 0 6px rgba(255,159,28,0.4); }
+
+/* SENSOR TOGGLE */
+.sensor-toggle { display: flex; flex-direction: column; gap: 6px; }
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-radius: 5px; background: var(--surface2);
+  border: 1px solid var(--border);
+}
+.toggle-row .t-label { font-size: 12px; font-weight: 600; }
+.toggle-row .t-type {
+  font-family: 'Space Mono', monospace; font-size: 9px;
+  padding: 2px 6px; border-radius: 2px; margin-left: 6px;
+}
+.type-200 { background: rgba(0,229,255,0.15); color: var(--js200-color); }
+.type-80  { background: rgba(255,159,28,0.15); color: var(--js80-color); }
+
+.switch {
+  position: relative; width: 34px; height: 18px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider-sw {
+  position: absolute; inset: 0; border-radius: 9px;
+  background: var(--border); cursor: pointer; transition: 0.2s;
+}
+.switch .slider-sw::before {
+  content: ''; position: absolute;
+  width: 12px; height: 12px; border-radius: 50%;
+  left: 3px; top: 3px;
+  background: var(--text-dim); transition: 0.2s;
+}
+.switch input:checked + .slider-sw { background: var(--accent); }
+.switch input:checked + .slider-sw::before { transform: translateX(16px); background: #000; }
+.switch.orange input:checked + .slider-sw { background: var(--js80-color); }
+
+/* CANVAS AREA */
+.canvas-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #0d1014;
+  position: relative;
+}
+
+canvas { display: block; border-radius: 8px; }
+
+/* OPPONENT */
+.opp-controls {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 8px 14px; border-radius: 30px;
+  font-size: 12px; color: var(--text-dim);
+}
+.opp-controls kbd {
+  font-family: 'Space Mono', monospace; font-size: 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 2px 6px; border-radius: 3px; color: var(--text);
+}
+
+/* RIGHT PANEL - STATUS */
+.status-grid { display: flex; flex-direction: column; gap: 8px; }
+.status-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; border-radius: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+}
+.status-item .s-label { font-size: 11px; color: var(--text-dim); }
+.status-item .s-value {
+  font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700;
+  color: var(--text-bright);
+}
+.status-item.warn .s-value { color: #ffb74d; }
+.status-item.ok   .s-value { color: #69f0ae; }
+.status-item.bad  .s-value { color: #ff5252; }
+
+.sensor-readout { display: flex; flex-direction: column; gap: 5px; }
+.readout-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px; border-radius: 5px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size: 12px; transition: border-color 0.1s, background 0.1s;
+}
+.readout-row.triggered {
+  border-color: var(--accent3); background: rgba(127,255,107,0.06);
+}
+.readout-row.triggered.orange { border-color: var(--js80-color); background: rgba(255,159,28,0.06); }
+.readout-row .r-name { font-weight: 600; }
+.readout-row .r-dist {
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-dim);
+}
+.readout-row .r-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0;
+  transition: background 0.1s, box-shadow 0.1s;
+}
+.readout-row.triggered .r-dot { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+.readout-row.triggered.orange .r-dot { background: var(--js80-color); box-shadow: 0 0 6px var(--js80-color); }
+
+.legend-block { display: flex; flex-direction: column; gap: 6px; }
+.leg-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+.leg-swatch { width: 16px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+.coverage-bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+.coverage-bar-label { display: flex; justify-content: space-between; font-size: 11px; }
+.bar-bg { background: var(--border); border-radius: 2px; height: 6px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width 0.2s; }
+
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+  .panel, .panel-right { border-right: none; border-bottom: 1px solid var(--border); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">IEEE</div>
+  <h1>Sumobot IR Sensor Simulator</h1>
+  <div class="sub">Robowars 2025 &middot; Dohyo &Oslash;154cm</div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="panel">
+
+    <div>
+      <div class="section-title">Sensor Configuration</div>
+      <div class="config-group">
+        <div class="config-preset active" onclick="setPreset('current')" id="preset-current">
+          <div class="preset-dot" style="background:#00e5ff"></div>
+          <div>
+            <div class="preset-name">Current Plan</div>
+            <div class="preset-desc">2&times; JS200XF front sides<br>3&times; JS80XF (L/C/R)</div>
+          </div>
+          <div class="active-tag">ACTIVE</div>
+        </div>
+        <div class="config-preset" onclick="setPreset('front4')" id="preset-front4">
+          <div class="preset-dot" style="background:#ff9f1c"></div>
+          <div>
+            <div class="preset-name">Front Heavy</div>
+            <div class="preset-desc">2&times; JS200XF + 2&times; JS80XF front<br>No sides</div>
+          </div>
+          <div class="active-tag">ACTIVE</div>
+        </div>
+        <div class="config-preset" onclick="setPreset('360')" id="preset-360">
+          <div class="preset-dot" style="background:#7fff6b"></div>
+          <div>
+            <div class="preset-name">360&deg; Scout</div>
+            <div class="preset-desc">2&times; JS200XF front<br>JS80XF L/C/R + rear</div>
+          </div>
+          <div class="active-tag">ACTIVE</div>
+        </div>
+        <div class="config-preset" onclick="setPreset('custom')" id="preset-custom">
+          <div class="preset-dot" style="background:#888"></div>
+          <div>
+            <div class="preset-name">Custom</div>
+            <div class="preset-desc">Toggle sensors below</div>
+          </div>
+          <div class="active-tag">ACTIVE</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">JS200XF Angles</div>
+      <div class="slider-group">
+        <div class="slider-row slider-200">
+          <div class="slider-label"><span>Front-L angle</span><span id="lbl-200l">30&deg;</span></div>
+          <input type="range" id="sl-200l" min="5" max="70" value="30" oninput="onSlider()">
+        </div>
+        <div class="slider-row slider-200">
+          <div class="slider-label"><span>Front-R angle</span><span id="lbl-200r">30&deg;</span></div>
+          <input type="range" id="sl-200r" min="5" max="70" value="30" oninput="onSlider()">
+        </div>
+        <div class="slider-row slider-200">
+          <div class="slider-label"><span>Beam width (&frac12;)</span><span id="lbl-200bw">25&deg;</span></div>
+          <input type="range" id="sl-200bw" min="8" max="40" value="25" oninput="onSlider()">
+        </div>
+        <div class="slider-row slider-200">
+          <div class="slider-label"><span>Range (cm)</span><span id="lbl-200r2">200cm</span></div>
+          <input type="range" id="sl-200range" min="30" max="200" value="200" oninput="onSlider()">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">JS80XF Angles</div>
+      <div class="slider-group">
+        <div class="slider-row slider-80">
+          <div class="slider-label"><span>Side spread angle</span><span id="lbl-80side">90&deg;</span></div>
+          <input type="range" id="sl-80side" min="60" max="130" value="90" oninput="onSlider()">
+        </div>
+        <div class="slider-row slider-80">
+          <div class="slider-label"><span>Beam width (&frac12;)</span><span id="lbl-80bw">30&deg;</span></div>
+          <input type="range" id="sl-80bw" min="10" max="50" value="30" oninput="onSlider()">
+        </div>
+        <div class="slider-row slider-80">
+          <div class="slider-label"><span>Range (cm)</span><span id="lbl-80range">80cm</span></div>
+          <input type="range" id="sl-80range" min="20" max="150" value="80" oninput="onSlider()">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Individual Sensors</div>
+      <div class="sensor-toggle" id="sensor-toggles"></div>
+    </div>
+
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <canvas id="sim" width="580" height="580"></canvas>
+    <div class="opp-controls">
+      <span>Drag opponent</span>
+      <kbd>&uarr;&darr;&larr;&rarr;</kbd>
+      <span>or click dohyo</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+
+    <div>
+      <div class="section-title">Coverage Analysis</div>
+      <div class="status-grid">
+        <div class="status-item" id="st-frontblind">
+          <div class="s-label">Front blind spot</div>
+          <div class="s-value" id="sv-frontblind">&mdash;</div>
+        </div>
+        <div class="status-item" id="st-coverage">
+          <div class="s-label">Est. angular coverage</div>
+          <div class="s-value" id="sv-coverage">&mdash;</div>
+        </div>
+        <div class="status-item" id="st-opp">
+          <div class="s-label">Opponent distance</div>
+          <div class="s-value" id="sv-opp">&mdash;</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Sensor Readings</div>
+      <div class="sensor-readout" id="sensor-readout"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Coverage Bars</div>
+      <div style="display:flex;flex-direction:column;gap:10px" id="coverage-bars"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Legend</div>
+      <div class="legend-block">
+        <div class="leg-row"><div class="leg-swatch" style="background:rgba(0,229,255,0.25)"></div>JS200XF detection zone</div>
+        <div class="leg-row"><div class="leg-swatch" style="background:rgba(255,159,28,0.25)"></div>JS80XF detection zone</div>
+        <div class="leg-row"><div class="leg-swatch" style="background:rgba(127,255,107,0.2)"></div>Overlap zone (both types)</div>
+        <div class="leg-row"><div class="leg-swatch" style="background:rgba(255,40,40,0.22)"></div>Blind spot (no coverage)</div>
+        <div class="leg-row"><div class="leg-swatch" style="background:#2a1a2e;border:1.5px solid rgba(200,100,255,0.8);border-radius:2px"></div>Opponent robot</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// STATE
+const DOHYO_REAL_CM = 77;
+const ROBOT_W_CM = 18, ROBOT_H_CM = 14;
+
+const DEFAULT_SENSORS = {
+  '200L': { type:'200', label:'JS200XF-L', angle:-30, enabled:true },
+  '200R': { type:'200', label:'JS200XF-R', angle: 30, enabled:true },
+  '80C':  { type:'80',  label:'JS80XF-C',  angle:  0, enabled:true },
+  '80L':  { type:'80',  label:'JS80XF-L',  angle:-90, enabled:true },
+  '80R':  { type:'80',  label:'JS80XF-R',  angle: 90, enabled:true },
+  '80B':  { type:'80',  label:'JS80XF-B',  angle:180, enabled:false },
+};
+
+let sensors = JSON.parse(JSON.stringify(DEFAULT_SENSORS));
+let activePreset = 'current';
+
+let s200angle_l = 30, s200angle_r = 30, s200bw = 25, s200range = 200;
+let s80side = 90, s80bw = 30, s80range = 80;
+
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const CX = W/2, CY = H/2;
+
+const SCALE = (W * 0.44) / DOHYO_REAL_CM;
+const DOHYO_R = DOHYO_REAL_CM * SCALE;
+
+let oppX = CX, oppY = CY - DOHYO_R * 0.55;
+const OPP_W = 18 * SCALE;
+const OPP_H = 14 * SCALE;
+const OPP_R = Math.max(OPP_W, OPP_H) / 2;
+let dragging = false;
+let dragOffX = 0, dragOffY = 0;
+
+const robotW = 18 * SCALE;
+const robotH = 14 * SCALE;
+
+function getSensorPos(key) {
+  const s = sensors[key];
+  if (s.type === '200') {
+    const side = key === '200L' ? -1 : 1;
+    return { x: CX + side * robotW * 0.35, y: CY - robotH / 2 };
+  }
+  const a = s.angle;
+  if (Math.abs(a) < 30) return { x: CX, y: CY - robotH / 2 };
+  if (a <= -60) return { x: CX - robotW / 2, y: CY };
+  if (a >=  60 && a <= 120) return { x: CX + robotW / 2, y: CY };
+  if (Math.abs(a) >= 150) return { x: CX, y: CY + robotH / 2 };
+  return { x: CX, y: CY - robotH / 2 };
+}
+
+function toCanvasAngle(deg) { return (deg - 90) * Math.PI / 180; }
+function degToRad(d) { return d * Math.PI / 180; }
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1014';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  const gs = 30;
+  for (let x = 0; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  const yochiR = Math.min(W, H) * 0.49;
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.setLineDash([4,4]);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(CX - yochiR, CY - yochiR, yochiR*2, yochiR*2);
+  ctx.setLineDash([]);
+
+  const zones200 = [], zones80 = [];
+
+  for (const [key, s] of Object.entries(sensors)) {
+    if (!s.enabled) continue;
+    const pos = getSensorPos(key);
+    const bw   = s.type === '200' ? s200bw  : s80bw;
+    const rng  = s.type === '200' ? s200range * SCALE : s80range * SCALE;
+    const ang  = s.type === '200'
+      ? (key === '200L' ? -s200angle_l : s200angle_r)
+      : s.angle;
+    const ca   = toCanvasAngle(ang);
+    const a1   = ca - degToRad(bw);
+    const a2   = ca + degToRad(bw);
+    const arr = s.type === '200' ? zones200 : zones80;
+    arr.push({ pos, a1, a2, rng, key });
+  }
+
+  for (const z of zones200) {
+    ctx.beginPath();
+    ctx.moveTo(z.pos.x, z.pos.y);
+    ctx.arc(z.pos.x, z.pos.y, z.rng, z.a1, z.a2);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,229,255,0.22)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,229,255,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  for (const z of zones80) {
+    ctx.beginPath();
+    ctx.moveTo(z.pos.x, z.pos.y);
+    ctx.arc(z.pos.x, z.pos.y, z.rng, z.a1, z.a2);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,159,28,0.22)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,159,28,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  if (zones200.length && zones80.length) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = W; tempCanvas.height = H;
+    const tc = tempCanvas.getContext('2d');
+    for (const z of zones200) {
+      tc.beginPath(); tc.moveTo(z.pos.x, z.pos.y);
+      tc.arc(z.pos.x, z.pos.y, z.rng, z.a1, z.a2);
+      tc.closePath(); tc.fillStyle = '#fff'; tc.fill();
+    }
+    tc.globalCompositeOperation = 'destination-in';
+    for (const z of zones80) {
+      tc.beginPath(); tc.moveTo(z.pos.x, z.pos.y);
+      tc.arc(z.pos.x, z.pos.y, z.rng, z.a1, z.a2);
+      tc.closePath(); tc.fillStyle = '#fff'; tc.fill();
+    }
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(tempCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  ctx.beginPath();
+  ctx.arc(CX, CY, DOHYO_R, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(20,26,32,0.85)';
+  ctx.fill();
+
+  const tawaraW = 5 * SCALE;
+  ctx.beginPath();
+  ctx.arc(CX, CY, DOHYO_R, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = tawaraW;
+  ctx.stroke();
+
+  for (let r = 25; r < DOHYO_REAL_CM; r += 25) {
+    ctx.beginPath();
+    ctx.arc(CX, CY, r * SCALE, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.font = '9px Space Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(r + 'cm', CX + r * SCALE + 3, CY);
+  }
+
+  const skW = 2 * SCALE, skH = 20 * SCALE;
+  ctx.fillStyle = 'rgba(139,90,43,0.8)';
+  ctx.fillRect(CX - 10*SCALE - skW/2, CY - skH/2, skW, skH);
+  ctx.fillRect(CX + 10*SCALE - skW/2, CY - skH/2, skW, skH);
+
+  if (sensors['200L'].enabled && sensors['200R'].enabled) {
+    const leftInner  = -s200angle_l + s200bw;
+    const rightInner =  s200angle_r - s200bw;
+    if (rightInner > leftInner) {
+      const blindPos = { x: CX, y: CY - robotH/2 };
+      ctx.beginPath();
+      ctx.moveTo(blindPos.x, blindPos.y);
+      ctx.arc(blindPos.x, blindPos.y, s200range * SCALE,
+        toCanvasAngle(leftInner), toCanvasAngle(rightInner));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,40,40,0.30)';
+      ctx.fill();
+    }
+  }
+
+  for (const [key, s] of Object.entries(sensors)) {
+    if (!s.enabled) continue;
+    const pos = getSensorPos(key);
+    const ang  = s.type === '200'
+      ? (key === '200L' ? -s200angle_l : s200angle_r)
+      : s.angle;
+    const ca   = toCanvasAngle(ang);
+    const rng  = s.type === '200' ? s200range * SCALE : s80range * SCALE;
+    const col  = s.type === '200' ? '#00e5ff' : '#ff9f1c';
+
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.lineTo(pos.x + Math.cos(ca)*rng, pos.y + Math.sin(ca)*rng);
+    ctx.strokeStyle = col + 'bb';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 5, 0, Math.PI*2);
+    ctx.fillStyle = col;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 8, 0, Math.PI*2);
+    ctx.strokeStyle = col + '44';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  const rX = CX - robotW/2, rY = CY - robotH/2;
+  ctx.fillStyle = '#1a2030';
+  ctx.strokeStyle = '#3a4860';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(rX, rY, robotW, robotH, 4);
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  const triH = 8, triW = 14;
+  ctx.moveTo(CX, rY - triH);
+  ctx.lineTo(CX - triW/2, rY);
+  ctx.lineTo(CX + triW/2, rY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(200,208,220,0.5)';
+  ctx.font = '500 10px Rajdhani, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('SUMOBOT', CX, CY + 4);
+
+  const dx = oppX - CX, dy = oppY - CY;
+  const oppDist = Math.sqrt(dx*dx + dy*dy) / SCALE;
+  const inDohyo = Math.sqrt(dx*dx + dy*dy) < DOHYO_R - OPP_R * 0.5;
+
+  const oX = oppX - OPP_W/2, oY = oppY - OPP_H/2;
+  ctx.beginPath();
+  ctx.roundRect(oX, oY, OPP_W, OPP_H, 4);
+  ctx.fillStyle = inDohyo ? '#2a1a2e' : '#3a1010';
+  ctx.fill();
+  ctx.strokeStyle = inDohyo ? 'rgba(200,100,255,0.8)' : 'rgba(255,80,80,0.9)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = inDohyo ? 'rgba(200,100,255,0.7)' : 'rgba(255,80,80,0.7)';
+  ctx.beginPath();
+  ctx.moveTo(oppX, oY + OPP_H + 7);
+  ctx.lineTo(oppX - 6, oY + OPP_H);
+  ctx.lineTo(oppX + 6, oY + OPP_H);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = inDohyo ? 'rgba(200,150,255,0.8)' : 'rgba(255,120,120,0.8)';
+  ctx.font = '500 10px Rajdhani, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('OPPONENT', oppX, oppY + 4);
+
+  ctx.beginPath();
+  ctx.moveTo(CX, CY);
+  ctx.lineTo(oppX, oppY);
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  updateReadouts(oppDist);
+}
+
+function sensorDetects(key) {
+  const s = sensors[key];
+  if (!s.enabled) return { hit: false, dist: null };
+  const pos = getSensorPos(key);
+  const bw  = s.type === '200' ? s200bw  : s80bw;
+  const rng = s.type === '200' ? s200range * SCALE : s80range * SCALE;
+  const ang = s.type === '200'
+    ? (key === '200L' ? -s200angle_l : s200angle_r)
+    : s.angle;
+  const ca  = toCanvasAngle(ang);
+
+  const vx = oppX - pos.x, vy = oppY - pos.y;
+  const distPx = Math.sqrt(vx*vx + vy*vy);
+  const oppHalfDiagCheck = Math.sqrt((OPP_W/2)**2 + (OPP_H/2)**2);
+  if (distPx > rng + oppHalfDiagCheck) return { hit: false, dist: distPx / SCALE };
+
+  const oppAngle = Math.atan2(vy, vx);
+  let diff = oppAngle - ca;
+  while (diff >  Math.PI) diff -= 2*Math.PI;
+  while (diff < -Math.PI) diff += 2*Math.PI;
+
+  const oppHalfDiag = Math.sqrt((OPP_W/2)**2 + (OPP_H/2)**2);
+  const hit = Math.abs(diff) <= degToRad(bw) + Math.asin(Math.min(1, oppHalfDiag / Math.max(distPx, 1)));
+  return { hit, dist: distPx / SCALE };
+}
+
+function updateReadouts(oppDist) {
+  const sv = document.getElementById('sv-opp');
+  const si = document.getElementById('st-opp');
+  sv.textContent = oppDist.toFixed(1) + ' cm';
+  si.className = 'status-item ' + (oppDist < 50 ? 'bad' : oppDist < 100 ? 'warn' : 'ok');
+
+  const leftInner  = -s200angle_l + s200bw;
+  const rightInner =  s200angle_r - s200bw;
+  const blindDeg = Math.max(0, rightInner - leftInner);
+  const hasCenterJS80 = sensors['80C'] && sensors['80C'].enabled;
+  const svb = document.getElementById('sv-frontblind');
+  const sib = document.getElementById('st-frontblind');
+  if (blindDeg <= 0) {
+    svb.textContent = 'None \u2713';
+    sib.className = 'status-item ok';
+  } else if (hasCenterJS80) {
+    svb.textContent = '~' + Math.round(blindDeg) + '\u00b0 (JS80 fills)';
+    sib.className = 'status-item warn';
+  } else {
+    svb.textContent = '~' + Math.round(blindDeg) + '\u00b0 open';
+    sib.className = 'status-item bad';
+  }
+
+  const activeCount = Object.values(sensors).filter(s=>s.enabled).length;
+  const cov = Math.min(100, Math.round(activeCount / 5 * 60 + (hasCenterJS80 ? 15 : 0) + (sensors['80B']?.enabled ? 20 : 0)));
+  document.getElementById('sv-coverage').textContent = cov + '%';
+  document.getElementById('st-coverage').className = 'status-item ' + (cov >= 80 ? 'ok' : cov >= 60 ? 'warn' : 'bad');
+
+  const ro = document.getElementById('sensor-readout');
+  ro.innerHTML = '';
+  for (const [key, s] of Object.entries(sensors)) {
+    const { hit, dist } = sensorDetects(key);
+    const isOrange = s.type === '80';
+    const cls = hit ? ('readout-row triggered' + (isOrange ? ' orange' : '')) : 'readout-row';
+    const row = document.createElement('div');
+    row.className = cls;
+    row.innerHTML = `
+      <div class="r-dot"></div>
+      <div class="r-name">${s.label}</div>
+      <div class="r-dist">${s.enabled ? (dist ? dist.toFixed(0)+'cm' : '&mdash;') : 'OFF'}</div>
+    `;
+    if (!s.enabled) row.style.opacity = '0.35';
+    ro.appendChild(row);
+  }
+
+  const cb = document.getElementById('coverage-bars');
+  cb.innerHTML = '';
+  const bars = [
+    { label: 'Front center', pct: blindDeg <= 0 ? 100 : hasCenterJS80 ? 70 : 100 - blindDeg/1.8, col: '#00e5ff' },
+    { label: 'Front sides',  pct: Math.min(100, (s200bw + (sensors['200L'].enabled ? 40:0) + (sensors['200R'].enabled ? 40:0))), col: '#00e5ff' },
+    { label: 'Left side',    pct: sensors['80L']?.enabled ? Math.min(100, s80bw*2) : 0, col: '#ff9f1c' },
+    { label: 'Right side',   pct: sensors['80R']?.enabled ? Math.min(100, s80bw*2) : 0, col: '#ff9f1c' },
+    { label: 'Rear',         pct: sensors['80B']?.enabled ? Math.min(100, s80bw*2) : 0, col: '#7fff6b' },
+  ];
+  for (const b of bars) {
+    const d = document.createElement('div');
+    d.className = 'coverage-bar-wrap';
+    d.innerHTML = `
+      <div class="coverage-bar-label">
+        <span style="font-size:11px;color:var(--text-dim)">${b.label}</span>
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:${b.col}">${Math.round(b.pct)}%</span>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-fill" style="width:${b.pct}%;background:${b.col}"></div>
+      </div>`;
+    cb.appendChild(d);
+  }
+}
+
+function buildToggles() {
+  const container = document.getElementById('sensor-toggles');
+  container.innerHTML = '';
+  for (const [key, s] of Object.entries(sensors)) {
+    const isOrange = s.type === '80';
+    const row = document.createElement('div');
+    row.className = 'toggle-row';
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="t-label">${s.label}</span>
+        <span class="t-type ${isOrange ? 'type-80' : 'type-200'}">${s.type === '200' ? 'JS200XF' : 'JS80XF'}</span>
+      </div>
+      <label class="switch ${isOrange ? 'orange' : ''}">
+        <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSensor('${key}', this.checked)">
+        <span class="slider-sw"></span>
+      </label>`;
+    container.appendChild(row);
+  }
+}
+
+function toggleSensor(key, val) {
+  sensors[key].enabled = val;
+  activePreset = 'custom';
+  document.querySelectorAll('.config-preset').forEach(p => p.classList.remove('active'));
+  document.getElementById('preset-custom').classList.add('active');
+  draw();
+}
+
+const PRESETS = {
+  current: { '200L':true, '200R':true, '80C':true,  '80L':true,  '80R':true,  '80B':false },
+  front4:  { '200L':true, '200R':true, '80C':true,  '80L':false, '80R':false, '80B':false },
+  '360':   { '200L':true, '200R':true, '80C':true,  '80L':true,  '80R':true,  '80B':true  },
+  custom:  null
+};
+
+function setPreset(name) {
+  activePreset = name;
+  document.querySelectorAll('.config-preset').forEach(p => p.classList.remove('active'));
+  document.getElementById('preset-' + name).classList.add('active');
+  if (PRESETS[name]) {
+    for (const [k, v] of Object.entries(PRESETS[name])) {
+      sensors[k].enabled = v;
+    }
+    buildToggles();
+    draw();
+  }
+}
+
+function onSlider() {
+  s200angle_l = +document.getElementById('sl-200l').value;
+  s200angle_r = +document.getElementById('sl-200r').value;
+  s200bw      = +document.getElementById('sl-200bw').value;
+  s200range   = +document.getElementById('sl-200range').value;
+  s80side     = +document.getElementById('sl-80side').value;
+  s80bw       = +document.getElementById('sl-80bw').value;
+  s80range    = +document.getElementById('sl-80range').value;
+
+  sensors['80L'].angle = -s80side;
+  sensors['80R'].angle =  s80side;
+
+  document.getElementById('lbl-200l').textContent   = s200angle_l + '\u00b0';
+  document.getElementById('lbl-200r').textContent   = s200angle_r + '\u00b0';
+  document.getElementById('lbl-200bw').textContent  = s200bw + '\u00b0';
+  document.getElementById('lbl-200r2').textContent  = s200range + 'cm';
+  document.getElementById('lbl-80side').textContent = s80side + '\u00b0';
+  document.getElementById('lbl-80bw').textContent   = s80bw + '\u00b0';
+  document.getElementById('lbl-80range').textContent= s80range + 'cm';
+
+  draw();
+}
+
+function getCanvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
+  };
+}
+
+canvas.addEventListener('mousedown', e => {
+  const p = getCanvasPos(e);
+  const dx = p.x - oppX, dy = p.y - oppY;
+  if (Math.sqrt(dx*dx+dy*dy) < OPP_R + 10) {
+    dragging = true; dragOffX = dx; dragOffY = dy;
+  } else {
+    const dx2 = p.x - CX, dy2 = p.y - CY;
+    if (Math.sqrt(dx2*dx2+dy2*dy2) < DOHYO_R) {
+      oppX = p.x; oppY = p.y; draw();
+    }
+  }
+});
+canvas.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const p = getCanvasPos(e);
+  oppX = p.x - dragOffX; oppY = p.y - dragOffY;
+  draw();
+});
+canvas.addEventListener('mouseup', () => dragging = false);
+canvas.addEventListener('mouseleave', () => dragging = false);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = getCanvasPos(e); oppX = p.x; oppY = p.y; draw(); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); const p = getCanvasPos(e); oppX = p.x; oppY = p.y; draw(); }, { passive: false });
+
+document.addEventListener('keydown', e => {
+  const spd = 5;
+  if (e.key === 'ArrowUp')    oppY -= spd;
+  if (e.key === 'ArrowDown')  oppY += spd;
+  if (e.key === 'ArrowLeft')  oppX -= spd;
+  if (e.key === 'ArrowRight') oppX += spd;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+    e.preventDefault(); draw();
+  }
+});
+
+buildToggles();
+onSlider();
+draw();
+</script>
+
+</body>
+</html>
